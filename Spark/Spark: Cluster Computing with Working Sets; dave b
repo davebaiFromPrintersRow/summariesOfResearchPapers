@@ -1,0 +1,59 @@
+Spark: Cluster Computing with Working Sets; dave bai's summary, paraphrase, copy pastes of article
+
+
+
+Abstract
+
+	- MapReduce is current standard (at time of paper) for big data apps using clusters
+	- One application MR is not good for is one that reuses a working set of a working set of data across multiple parallel operations
+		* e.g. iterative machine learning, interactive data mining
+	- Spark is introduced to support this, using resilient distributed datasets abstraction
+		* RDD is a "read-only collection of objects partitioned across a set of machines that can be rebuilt if a partition is lost"
+	- Highlights: 
+		*  "Spark can outperform Hadoop by 10x in iterative machine learning jobs, and can be used to interactively query a 39 GB dataset with sub-second response time"
+
+1. Introduction
+
+	- MR provides optimizations for locality aware scheduling, fault tolerance, load balancing
+	- However, MR has performed poorly in iterative jobs (e.g. optimizing a parameters through repeated actions on a dataset)
+	- Also, MR performs poorly on ad hoc interactive analytics, due to latency in extra MR job to read data and also latency in reading from disk
+	- Spark is the cluster computing framework innovation to solve MR deficiencies from above
+	- Spark provides an abstraction called RDD, that is a read only collection of objects partitioned across cluster
+	- RDDs contain lineage information so that they can be recalculated by the system (without user intervention) if the partition is lost
+	- Spark implemented in scala 
+	- Interactive mode is supported, authors' bold claim: "We believe that Spark is the first system to allow an efficient, general-purpose programming language to be used interactively to process large datasets on a cluster"
+
+2. Programming Model
+
+	- Driver program controls application flow and launches parallel functions on partitions
+
+2.1. Resilient Distributed Datasets (RDDs)
+
+	- RDD contains info to allow recalculation from reliable storage state if lost
+	- four ways to construct
+		* shared file system
+		* parallelizing a Scala collection
+		* transformation of existing RDD
+		* persistence of existing RDD (cache or save)
+	- they are lazy and ephemeral, meaning they are only computed when necessary and discarded from memory by default after use
+
+2.2 Parallel Operations
+	
+	- reduce, collect, foreach
+
+2.3 Shared Variables
+	
+	- broadcast var and accumulators
+
+3 Examples
+
+	- text search for number of lines containg "ERROR"
+	- logistic regression, an iterative machine learning classification problem using gradient descent
+		* for(p <- points){body} is syntactic sugar for points.foreach(p => {body})
+	- Alternating least squares, CPU intensive matrix machine learning problem 
+	rather than data intensive, e.g. Netflix predicting viewer preferences
+
+4 Implementation
+
+	- built on mesos
+
