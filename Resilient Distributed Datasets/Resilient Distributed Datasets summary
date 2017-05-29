@@ -1,0 +1,80 @@
+Resilient Distributed Datasets: A Fault-Tolerant Abstraction for In-Memory Cluster Computing, Summary by dave bai: 
+
+This paper describes the model of Resilient Distributed Datasets, which is the main memory abstraction provided by Spark.
+They are motivated by the improvement of iterative algorithms and interactive data mining.
+Spark provides coarse grained operations across a cluster of data and is useful enough to capture many use cases.
+
+Spark applications reuse intermediate data in-memory across multiple computations, something earlier big data clustering computational engines can't do well. Spark improves this by abstracting out and handling distributed big data in memory. 
+This paradigm is common in iterative machine learning and graph algorithms as well as interactive data mining. 
+Spark tries avoids IO overhead, data replication and overhead serialization time.
+Key concept is RDDs, which are fault tolerant partititions that hold data and allow closures to be run on them in memory.
+RDDs are fault tolerant due to the coarse-grained operations that define them, which can be recalculated in the event of data failure (using its lineage, i.e. trail of transformations).
+The authors will show Spark is up to 20x faster than Hadoop MR on iterative apps, among other accomplishments over its predecessors. 
+
+RDD is a "read-only, partitioned collection of records."
+They originate from other RDDs or from stable storage.
+Lineage is a key concept: "a program cannot reference an RDD that it cannot reconstruct after a failure"
+User has the power to manipulate persistence (storage of RDDs) and partitioning (data locality of partitions)
+RDDs are lazy, meaning they are only computed when the driver requests certains results, called actions (e.g. save, collect, count)
+
+RDD allows for coarse grained operations to define data sets, as opposed to Distributed Shared Memory, which relies on fine grained operations on specific memory locations as well as checkpointing to save intermediate data.
+During spark runtime, the Driver (master) program will launch many data-locality aware workers that are responsible for computing its partitions of data.
+RDDS are good at iterative batch applications that compute the same operation on the entire dataset; the are not good for async apps that make fine grained changes to state. 
+
+Spark is implemented in Scala, "a statically typed functional programming language for the Java VM"
+Spark driver program connects to its workers. The driver defines RDDs and acts on them. The driver also traces RDD lineage. 
+Workers are long lived executors tasked with computing on RDD partitions and storing them when called upon. 
+Spark passes functions using closures by passing them as deserialized Java objects
+
+Spark provides transformations (lazy RDD to RDD computations) and actions (driver asking for a result or saving data to external storage)
+
+RDDs provide 5 interface points
+	- a set of partitions
+	- a set of dependencies (lineage)
+	- a function for computation on the entire dataset
+	- partitioning scheme 
+	- data placement
+RDDs have narrow dependencies or wide dependencies (shuffling occurs) in the context of their partitions
+
+Spark is 14,000 lines of scala, on a mesos cluster
+Spark's job scheduler comes alive when an action is called, and it examines the lineage to build a directed acyclic graph of stages (pipelined, narrow dependencies) to execute computation result. The boundaries of stages are the shuffles.
+Spark allows for interactive data queries on large datasets. 
+
+Spark provides 1) in memory storage deserialized POJOs, 2) in memory storage serialized POJOs, 3) on disk storage
+
+Section 6 Evaluaton of the paper involves metrics for how Spark performed in comprehensive scenarios. Refer to the paper for the concrete results. In short, Spark could be 20x faster than Hadoop MR on certain tasks. Certain scenarios were tested, including: 
+	- Iterative ML apps
+	- PageRank
+	- fault recovery
+	-  Behavior with Insufficient Memory
+	-  User Applications Built with Spark
+	-  Interactive Data Mining
+
+Authors say: "Although RDDs seem to offer a limited programming interface due to their immutable nature and coarse-grained transformations, we have found them suitable for a wide class of applications."
+Also, "RDDs can also capture the optimizations that these frameworks perform, such as keeping specific data in memory, partitioning it to minimize communication, and recovering from failures efficiently."
+
+***
+
+My question at end: Spark framework has strong roots in... in memory storage, computations, optimizing IO, and avoidance of unnecessary serialization overhead. What can we solve with this new tool that was too hard or impossible to solve before? An analogy is: if i was smarter with more brain Horse Power, then what new stuff could i accomplish now? Software needs to catch up with the fast advancements in hardware. 
+
+Author postulates towards end: 
+"One final question is why previous frameworks have
+not offered the same level of generality. We believe that
+this is because these systems explored specific problems
+that MapReduce and Dryad do not handle well, such as
+iteration, without observing that the common cause of
+these problems was a lack of data sharing abstractions."
+
+***
+
+7.2 Leveraging RDDs for Debugging
+This was an interesting section, saying that we could leverage the lineage capabilities of RDDs to help us in debugging. 
+	- "In particular, by logging the lineage of RDDs created during a job, one can (1) reconstruct these RDDs later and let the user query them interactively and (2) re-run any task from the job in a single-process debugger, by recomputing the RDD partitions it depends on."
+	- This idea should save time in e2e testing, instead of having to run an entire cluster we just need to run the lineage of functions on just the interested data. 
+	- He teases: "We are currently developing a Spark debugger based on these ideas [33]."
+
+"RDDs represent a more efficient data sharing abstraction
+than stable storage because they avoid the cost of data
+replication, I/O and serialization"
+
+Logical progression in conclusion -> RDD makes data replication cheaper w/ lineages. RDD is implemented in Spark and benchmark results prove the original claim of faster processing compared to old MR framework. 
